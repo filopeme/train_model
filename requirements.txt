@@ -1,0 +1,12 @@
+flask==2.2.5
+transformers==4.40.1
+torch==2.2.2
+datasets==2.18.0
+pandas==2.2.2
+scikit-learn==1.4.2
+seqeval==1.2.2
+layoutparser==0.3.4
+python-dotenv==1.0.1
+tqdm==4.66.2
+numpy<2.0
+accelerate>=0.21.0
