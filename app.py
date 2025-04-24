@@ -1,13 +1,18 @@
 import os
-from flask import Flask, redirect, url_for, flash
+from flask import Flask,request, redirect, url_for, flash
 import subprocess
 from importjson import extract_layoutlm_data
 
+UPLOAD_FOLDER = "/app/uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+#app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-UPLOAD_FOLDER = "uploaded_jsons"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+#UPLOAD_FOLDER = "uploaded_jsons"
+#os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/")
 def index():
@@ -38,7 +43,10 @@ def upload_json():
         return redirect(url_for("index"))
 
     if file and file.filename.endswith('.json'):
-        save_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+
+        #save_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        print(f"Saving file to {save_path}")    
         file.save(save_path)
         flash(f"✅ File uploaded successfully: {save_path}", "success")
 
@@ -65,19 +73,7 @@ def train_model():
 
     return redirect(url_for("index"))
 
-@app.route('/generate-train-jsonl')
-def generate_train_jsonl():
-    try:
-        base_dir = "output/sgd-results/511965/analysis/"   # Cambia esto a la ruta correcta
-        file_name = "511965_factura-comercial_1_2025-04-17_140637.pdf_async_analysis.json"
-        json_path = os.path.join(base_dir, file_name)
-        label = "Invoice"
-        output = extract_layoutlm_data(json_path, label)
-        flash(f"Archivo generado correctamente en: {output}", "success")
-    except Exception as e:
-        flash(f"Error: {str(e)}", "danger")
 
-    return redirect(url_for('index'))
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")

@@ -1,8 +1,16 @@
+version: '3.8'
+
 services:
   app:
-    build: . 
+    build: .
+    container_name: flask-layoutlm-app
     ports:
       - "5002:5000"
-
     volumes:
-      - ./output:/app/output 
+      - ./output:/app/output
+      - ./uploads:/app/uploads   # Added volume for file uploads
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+    command: flask run --host=0.0.0.0 --port=5000
+
