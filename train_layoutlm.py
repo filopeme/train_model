@@ -2,7 +2,7 @@
 import json
 import torch
 from torch.utils.data import Dataset
-from transformers import LayoutLMTokenizer, LayoutLMForSequenceClassification, TrainingArguments, Trainer
+from transformers import LayoutLMTokenizerFast, LayoutLMForSequenceClassification, TrainingArguments, Trainer
 from sklearn.metrics import accuracy_score, f1_score
 
 LABELS = ["Invoice", "Poliza", "Packing List", "Other"]
@@ -41,13 +41,14 @@ def compute_metrics(pred):
     }
 
 def train():
-    tokenizer = LayoutLMTokenizer.from_pretrained("microsoft/layoutlm-base-uncased")
+    tokenizer = LayoutLMTokenizerFast.from_pretrained("microsoft/layoutlm-base-uncased")
     model = LayoutLMForSequenceClassification.from_pretrained(
         "microsoft/layoutlm-base-uncased",
         num_labels=len(LABELS),
         id2label=id2label,
         label2id=label2id
     )
+    print(type(tokenizer))
 
     with open("train.jsonl", "r") as f:
         data = [json.loads(line) for line in f]
@@ -60,7 +61,7 @@ def train():
         num_train_epochs=3,
         logging_dir="./logs",
         logging_steps=10,
-        evaluation_strategy="no"
+      #  evaluation_strategy="no"
     )
 
     trainer = Trainer(
