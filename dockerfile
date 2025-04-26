@@ -4,6 +4,9 @@ WORKDIR /app
 
 COPY . /app
 
+# Fix permissions for upload folder
+# RUN chmod -R 755 /app/uploads
+
 # Upgrade pip first
 RUN pip install --upgrade pip
 
