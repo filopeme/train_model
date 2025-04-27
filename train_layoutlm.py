@@ -52,17 +52,32 @@ def compute_metrics(pred):
         "f1": f1_score(labels, preds, average="weighted")
     }
 
-# ----- Training Function -----
+#import os
+#import json
+#from transformers import AutoProcessor, AutoModelForSequenceClassification, TrainingArguments, Trainer
+
 def train():
     print("🔹 Loading processor and model...")
 
-    processor = AutoProcessor.from_pretrained("microsoft/layoutlmv3-base", apply_ocr=False)
-    model = AutoModelForSequenceClassification.from_pretrained(
-        "microsoft/layoutlmv3-base",
-        num_labels=len(LABELS),
-        id2label=id2label,
-        label2id=label2id
-    )
+    model_dir = "fine_tuned_layoutlmv3"
+    if os.path.exists(model_dir):
+        print(f"🔹 Found existing model in '{model_dir}', loading it...")
+        processor = AutoProcessor.from_pretrained(model_dir)
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_dir,
+            num_labels=len(LABELS),
+            id2label=id2label,
+            label2id=label2id
+        )
+    else:
+        print("🔹 No existing model found, loading base model...")
+        processor = AutoProcessor.from_pretrained("microsoft/layoutlmv3-base", apply_ocr=False)
+        model = AutoModelForSequenceClassification.from_pretrained(
+            "microsoft/layoutlmv3-base",
+            num_labels=len(LABELS),
+            id2label=id2label,
+            label2id=label2id
+        )
 
     # Load dataset
     jsonl_dir = "train_data"
@@ -99,9 +114,10 @@ def train():
     trainer.train()
 
     print("💾 Saving model...")
-    trainer.save_model("fine_tuned_layoutlmv3")
-    processor.save_pretrained("fine_tuned_layoutlmv3")
+    trainer.save_model(model_dir)
+    processor.save_pretrained(model_dir)
     print("✅ Training complete!")
+
 
 if __name__ == "__main__":
     train()
