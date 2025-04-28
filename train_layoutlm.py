@@ -2,6 +2,7 @@
 import os
 import json
 import torch
+import shutil
 from PIL import Image
 from torch.utils.data import Dataset
 from transformers import (
@@ -54,14 +55,18 @@ def compute_metrics(pred):
 
 #import os
 #import json
+#import shutil
 #from transformers import AutoProcessor, AutoModelForSequenceClassification, TrainingArguments, Trainer
 
 def train():
     print("🔹 Loading processor and model...")
 
-    model_dir = "fine_tuned_layoutlmv3"
+    #volume_path = "/app/model_volume"
+    volume_path="/train_model_dsk"
+    model_dir = os.path.join(volume_path, "fine_tuned_layoutlmv3")
+
     if os.path.exists(model_dir):
-        print(f"🔹 Found existing model in '{model_dir}', loading it...")
+        print(f"🔹 Found existing model in Docker volume at '{model_dir}', loading it...")
         processor = AutoProcessor.from_pretrained(model_dir)
         model = AutoModelForSequenceClassification.from_pretrained(
             model_dir,
@@ -70,7 +75,7 @@ def train():
             label2id=label2id
         )
     else:
-        print("🔹 No existing model found, loading base model...")
+        print("🔹 No existing model in volume, loading base model...")
         processor = AutoProcessor.from_pretrained("microsoft/layoutlmv3-base", apply_ocr=False)
         model = AutoModelForSequenceClassification.from_pretrained(
             "microsoft/layoutlmv3-base",
@@ -113,11 +118,15 @@ def train():
     print("🚀 Starting training...")
     trainer.train()
 
-    print("💾 Saving model...")
+    print("💾 Saving model to Docker volume...")
+    if os.path.exists(model_dir):
+        shutil.rmtree(model_dir)  # Clean old model
+
     trainer.save_model(model_dir)
     processor.save_pretrained(model_dir)
-    print("✅ Training complete!")
 
+    print(f"✅ Model saved to volume at '{model_dir}'")
+    print("✅ Training complete!")
 
 if __name__ == "__main__":
     train()
