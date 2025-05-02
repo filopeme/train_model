@@ -1,8 +1,10 @@
 import os
+import json
 from flask import Flask,request, redirect, url_for, flash,get_flashed_messages
 import subprocess
 from importjson import extract_layoutlm_data
 from importjson import predict_document
+from importjson import extract_key_value_pairs
 
 UPLOAD_FOLDER = "/app/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -93,22 +95,38 @@ def upload_json():
 
     if file and file.filename.endswith('.json'):
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-
-        #save_path = os.path.join(UPLOAD_FOLDER, file.filename)
         print(f"Saving file to {save_path}")    
         file.save(save_path)
         flash(f"✅ File uploaded successfully: {save_path}", "success")
 
         try:
+            # 🔍 Step 0: Extract key-value pairs from Textract JSON
+            with open(save_path, 'r') as f:
+                textract_data = json.load(f)
+            kv_result = extract_key_value_pairs(textract_data)
+
+            # Optional: show results in console or flash summary
+            print("🧾 Extracted Fields:")
+            for k, v in kv_result.items():
+                print(f"{k}: {v}")
+            flash(f"✅ Extracted {len(kv_result)} field-value pairs.", "success")
+            # Save key-value pairs as JSON
+            output_json_path = os.path.join(app.config['UPLOAD_FOLDER'], "extracted_fields.json")
+            with open(output_json_path, "w", encoding="utf-8") as outfile:
+                json.dump(kv_result, outfile, indent=2, ensure_ascii=False)
+            flash(f"📁 Saved extracted fields to: {output_json_path}", "info")
+            # Store it if needed for display in template or session
+            # session["extracted_fields"] = kv_result
+
             # Step 1: Process file for LayoutLM
-            label = request.form.get("label", "Invoice")  # Dynamic label (if for training)
+            label = request.form.get("label", "Invoice")
             jsonl_path = extract_layoutlm_data(save_path, label)
             flash(f"Processed and saved for training: {jsonl_path}", "success")
 
             # Step 2: If 'predict' option is selected, run prediction
             if request.form.get("action") == "predict":
                 predicted_label, confidence = predict_document(jsonl_path)
-                flash(f"🔎 Prediction: {predicted_label} ({confidence:.2%} confidence)", "info")
+                flash(f"🔎 Prediction: {predicted_label} ({confidence:.8%} confidence)", "info")
 
         except Exception as e:
             flash(f"❌ Error during processing: {str(e)}", "danger")
