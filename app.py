@@ -5,6 +5,7 @@ import subprocess
 from importjson import extract_layoutlm_data
 from importjson import predict_document
 from importjson import extract_key_value_pairs
+from importjson import extract_tables_from_textract
 
 UPLOAD_FOLDER = "/app/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -122,7 +123,11 @@ def upload_json():
             label = request.form.get("label", "Invoice")
             jsonl_path = extract_layoutlm_data(save_path, label)
             flash(f"Processed and saved for training: {jsonl_path}", "success")
+            # Extract table
+            df_table = extract_tables_from_textract(textract_data)
 
+            # Save as CSV (optional)
+            df_table.to_csv("extracted_invoice_table.csv", index=False)
             # Step 2: If 'predict' option is selected, run prediction
             if request.form.get("action") == "predict":
                 predicted_label, confidence = predict_document(jsonl_path)

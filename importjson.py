@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 import os
 from PIL import Image
 import torch
@@ -170,3 +171,56 @@ def extract_key_value_pairs(textract_result):
         kv_pairs[key_text] = value_text
 
     return kv_pairs
+#import json
+#import pandas as pd
+
+def extract_tables_from_textract(textract_data):
+    """
+    Extract structured tables from Textract TABLE and CELL blocks.
+
+    Parameters:
+        textract_data (dict): Textract JSON output.
+
+    Returns:
+        pd.DataFrame: A DataFrame representing the first detected table.
+    """
+    blocks = textract_data.get("Blocks", [])
+    block_map = {block["Id"]: block for block in blocks}
+    tables_data = {}
+
+    for block in blocks:
+        if block["BlockType"] == "CELL":
+            row_index = block.get("RowIndex", -1)
+            col_index = block.get("ColumnIndex", -1)
+            table_id = block.get("TableId", "default")
+            key = (table_id, row_index)
+
+            # Extract text from CHILD relationships
+            text = ""
+            for rel in block.get("Relationships", []):
+                if rel["Type"] == "CHILD":
+                    for child_id in rel["Ids"]:
+                        word = block_map.get(child_id)
+                        if word and word["BlockType"] == "WORD":
+                            text += word.get("Text", "") + " "
+            text = text.strip()
+
+            # Organize cells into a row dictionary
+            if key not in tables_data:
+                tables_data[key] = {}
+            tables_data[key][col_index] = text
+
+    # Convert to list of rows
+    rows = []
+    for (table_id, row_index), cols in sorted(tables_data.items()):
+        max_cols = max(cols.keys())
+        row = [cols.get(i + 1, "") for i in range(max_cols)]
+        rows.append(row)
+
+    # Build DataFrame
+    if rows:
+        headers = rows[0]
+        data_rows = rows[1:]
+        return pd.DataFrame(data_rows, columns=headers)
+    else:
+        return pd.DataFrame()
